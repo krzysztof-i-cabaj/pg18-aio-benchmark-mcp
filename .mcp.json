@@ -1,0 +1,18 @@
+{
+  "mcpServers": {
+    "postgres16": {
+      "command": "npx",
+      "args": ["-y", "mcp-postgres-server"],
+      "env": {
+        "POSTGRES_CONNECTION_STRING": "postgresql://postgres:TWOJE_HASLO@TWOJ_HOST:5416/postgres"
+      }
+    },
+    "postgres18": {
+      "command": "npx",
+      "args": ["-y", "mcp-postgres-server"],
+      "env": {
+        "POSTGRES_CONNECTION_STRING": "postgresql://postgres:TWOJE_HASLO@TWOJ_HOST:5432/postgres"
+      }
+    }
+  }
+}

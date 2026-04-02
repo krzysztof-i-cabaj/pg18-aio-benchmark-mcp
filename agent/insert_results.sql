@@ -1,0 +1,14 @@
+INSERT INTO benchmark.pomiary (io_method, test_name, run_no, czas_ms, shared_hit, shared_read, uwagi) VALUES ('sync', 'Sequential Scan', 1, 2436.032, 28944, 69666, 'Run 1');
+INSERT INTO benchmark.pomiary (io_method, test_name, run_no, czas_ms, shared_hit, shared_read, uwagi) VALUES ('sync', 'Bitmap Heap Scan', 1, 1261.752, 29215, 69378, 'Run 1');
+INSERT INTO benchmark.pomiary (io_method, test_name, run_no, czas_ms, shared_hit, shared_read, uwagi) VALUES ('sync', 'Sequential Scan', 2, 2347.591, 29040, 69570, 'Run 2');
+INSERT INTO benchmark.pomiary (io_method, test_name, run_no, czas_ms, shared_hit, shared_read, uwagi) VALUES ('sync', 'Bitmap Heap Scan', 2, 1471.301, 29311, 69282, 'Run 2');
+INSERT INTO benchmark.pomiary (io_method, test_name, run_no, czas_ms, shared_hit, shared_read, uwagi) VALUES ('sync', 'Sequential Scan', 3, 2589.852, 29136, 69474, 'Run 3');
+INSERT INTO benchmark.pomiary (io_method, test_name, run_no, czas_ms, shared_hit, shared_read, uwagi) VALUES ('sync', 'Bitmap Heap Scan', 3, 821.163, 29407, 69186, 'Run 3');
+INSERT INTO benchmark.pomiary (io_method, test_name, run_no, czas_ms, shared_hit, shared_read, uwagi) VALUES ('sync', 'VACUUM (500K)', 1, 22140.0, 0, 0, 'Vacuum runs');
+INSERT INTO benchmark.pomiary (io_method, test_name, run_no, czas_ms, shared_hit, shared_read, uwagi) VALUES ('worker', 'Sequential Scan', 1, 2452.47, 31963, 66652, 'Run 1');
+INSERT INTO benchmark.pomiary (io_method, test_name, run_no, czas_ms, shared_hit, shared_read, uwagi) VALUES ('worker', 'Bitmap Heap Scan', 1, 550.917, 31949, 66649, 'Run 1');
+INSERT INTO benchmark.pomiary (io_method, test_name, run_no, czas_ms, shared_hit, shared_read, uwagi) VALUES ('worker', 'Sequential Scan', 2, 1841.971, 31966, 66649, 'Run 2');
+INSERT INTO benchmark.pomiary (io_method, test_name, run_no, czas_ms, shared_hit, shared_read, uwagi) VALUES ('worker', 'Bitmap Heap Scan', 2, 480.035, 31954, 66644, 'Run 2');
+INSERT INTO benchmark.pomiary (io_method, test_name, run_no, czas_ms, shared_hit, shared_read, uwagi) VALUES ('worker', 'Sequential Scan', 3, 1175.055, 31991, 66624, 'Run 3');
+INSERT INTO benchmark.pomiary (io_method, test_name, run_no, czas_ms, shared_hit, shared_read, uwagi) VALUES ('worker', 'Bitmap Heap Scan', 3, 521.781, 31954, 66644, 'Run 3');
+INSERT INTO benchmark.pomiary (io_method, test_name, run_no, czas_ms, shared_hit, shared_read, uwagi) VALUES ('worker', 'VACUUM (500K)', 1, 22270.0, 0, 0, 'Vacuum runs');

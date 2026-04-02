@@ -1,0 +1,425 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PostgreSQL 18 Async I/O Benchmark Report</title>
+    <!-- Open Graph / Social Sharing -->
+    <meta property="og:title" content="PostgreSQL 18 Async I/O Benchmark">
+    <meta property="og:description" content="Bitmap Heap Scan 2.29x faster. Sequential Scan +26%. PG16 vs PG18 Async I/O benchmark results.">
+    <meta property="og:type" content="website">
+    <meta property="og:url" content="https://krzysztof-i-cabaj.github.io/pg18-aio-benchmark-mcp/">
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="PostgreSQL 18 Async I/O Benchmark">
+    <meta name="twitter:description" content="Bitmap Heap Scan 2.29x faster. Sequential Scan +26%. PG16 vs PG18 benchmark.">
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-color: #0f172a;
+            --card-bg: rgba(30, 41, 59, 0.7);
+            --text-primary: #f8fafc;
+            --text-secondary: #94a3b8;
+            --pg-blue: #336791;
+            --accent-green: #10b981;
+            --accent-purple: #8b5cf6;
+            --accent-pink: #ec4899;
+            --danger-red: #ef4444;
+            --glass-border: rgba(255, 255, 255, 0.1);
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: 'Outfit', sans-serif;
+            background: var(--bg-color);
+            background-image: 
+                radial-gradient(circle at 15% 50%, rgba(51, 103, 145, 0.15) 0%, transparent 50%),
+                radial-gradient(circle at 85% 30%, rgba(139, 92, 246, 0.15) 0%, transparent 50%);
+            color: var(--text-primary);
+            min-height: 100vh;
+            line-height: 1.6;
+            overflow-x: hidden;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 4rem 2rem;
+        }
+
+        header {
+            text-align: center;
+            margin-bottom: 4rem;
+            animation: fadeInDown 1s ease-out;
+        }
+
+        .title-badge {
+            display: inline-block;
+            background: rgba(51, 103, 145, 0.2);
+            color: #60a5fa;
+            padding: 0.5rem 1.5rem;
+            border-radius: 20px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            font-size: 0.85rem;
+            margin-bottom: 1rem;
+            border: 1px solid rgba(96, 165, 250, 0.2);
+        }
+
+        h1 {
+            font-size: 3.5rem;
+            font-weight: 800;
+            background: linear-gradient(to right, #60a5fa, #c084fc);
+            -webkit-background-clip: text;
+            background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin-bottom: 1rem;
+            letter-spacing: -1px;
+        }
+
+        p.subtitle {
+            font-size: 1.2rem;
+            color: var(--text-secondary);
+            max-width: 600px;
+            margin: 0 auto;
+        }
+
+        .dashboard {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 2rem;
+            margin-bottom: 4rem;
+        }
+
+        .card {
+            background: var(--card-bg);
+            border: 1px solid var(--glass-border);
+            border-radius: 24px;
+            padding: 2rem;
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.3s ease;
+            position: relative;
+            overflow: hidden;
+            animation: fadeInUp 0.8s ease-out backwards;
+        }
+
+        .card:nth-child(1) { animation-delay: 0.1s; }
+        .card:nth-child(2) { animation-delay: 0.2s; }
+        .card:nth-child(3) { animation-delay: 0.3s; }
+
+        .card:hover {
+            transform: translateY(-10px);
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.4);
+            border-color: rgba(255, 255, 255, 0.2);
+        }
+
+        .card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 4px;
+            background: linear-gradient(90deg, transparent, currentColor, transparent);
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+
+        .card:hover::before {
+            opacity: 1;
+        }
+
+        .card.card-green { color: var(--accent-green); }
+        .card.card-purple { color: var(--accent-purple); }
+        .card.card-neutral { color: var(--text-secondary); }
+
+        .card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 2rem;
+            color: var(--text-primary);
+        }
+
+        .card-title {
+            font-size: 1.25rem;
+            font-weight: 600;
+        }
+
+        .speedup-badge {
+            background: rgba(16, 185, 129, 0.15);
+            color: var(--accent-green);
+            padding: 0.4rem 1rem;
+            border-radius: 12px;
+            font-weight: 800;
+            font-size: 0.9rem;
+        }
+
+        .speedup-badge.neutral {
+            background: rgba(148, 163, 184, 0.15);
+            color: var(--text-secondary);
+        }
+
+        .chart-container {
+            margin-bottom: 1.5rem;
+        }
+
+        .bar-group {
+            margin-bottom: 1rem;
+        }
+
+        .bar-label {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 0.4rem;
+            font-size: 0.9rem;
+            color: var(--text-secondary);
+            font-weight: 600;
+        }
+
+        .bar-label span:last-child {
+            color: var(--text-primary);
+        }
+
+        .bar-track {
+            width: 100%;
+            height: 12px;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 6px;
+            overflow: hidden;
+            position: relative;
+        }
+
+        .bar-fill {
+            height: 100%;
+            border-radius: 6px;
+            width: 0;
+            transition: width 1.5s cubic-bezier(0.1, 0.8, 0.2, 1);
+        }
+
+        .bar-pg16 { background: var(--text-secondary); }
+        .bar-pg18-1 { background: linear-gradient(90deg, #10b981, #34d399); }
+        .bar-pg18-2 { background: linear-gradient(90deg, #8b5cf6, #c084fc); }
+        .bar-pg18-3 { background: linear-gradient(90deg, #94a3b8, #cbd5e1); }
+
+        .multiplier {
+            font-size: 3rem;
+            font-weight: 800;
+            text-align: center;
+            margin-top: 1rem;
+            background: linear-gradient(135deg, #fff, #94a3b8);
+            -webkit-background-clip: text;
+            background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .multiplier span {
+            font-size: 1.5rem;
+        }
+
+        .specs-panel {
+            background: rgba(15, 23, 42, 0.6);
+            border: 1px solid var(--glass-border);
+            border-radius: 20px;
+            padding: 3rem;
+            margin-top: 2rem;
+            animation: fadeInUp 1s ease-out 0.4s backwards;
+        }
+
+        .specs-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 2rem;
+            margin-top: 2rem;
+        }
+
+        .spec-item h4 {
+            color: var(--text-secondary);
+            font-size: 0.9rem;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-bottom: 0.5rem;
+        }
+
+        .spec-item p {
+            font-size: 1.2rem;
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+
+        footer {
+            text-align: center;
+            margin-top: 4rem;
+            color: var(--text-secondary);
+            font-size: 0.9rem;
+        }
+
+        @keyframes fadeInDown {
+            from { opacity: 0; transform: translateY(-30px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        @keyframes fadeInUp {
+            from { opacity: 0; transform: translateY(40px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            h1 { font-size: 2.5rem; }
+            .container { padding: 2rem 1rem; }
+            .dashboard { grid-template-columns: 1fr; }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <header>
+            <div class="title-badge">Performance Benchmark</div>
+            <h1>PostgreSQL 18 Async I/O</h1>
+            <p class="subtitle">Performance comparison of the new Worker (Async) module vs the native synchronous mechanism in PostgreSQL 16.</p>
+        </header>
+
+        <main class="dashboard">
+            <!-- Card 1 -->
+            <div class="card card-green">
+                <div class="card-header">
+                    <h2 class="card-title">Bitmap Heap Scan</h2>
+                    <div class="speedup-badge">+56.3% Faster</div>
+                </div>
+                
+                <div class="chart-container">
+                    <div class="bar-group">
+                        <div class="bar-label">
+                            <span>PG 16 (Sync mode)</span>
+                            <span>1184.7 ms</span>
+                        </div>
+                        <div class="bar-track">
+                            <div class="bar-fill bar-pg16" data-width="100%"></div>
+                        </div>
+                    </div>
+                    <div class="bar-group">
+                        <div class="bar-label">
+                            <span>PG 18 (Worker mode)</span>
+                            <span>517.6 ms</span>
+                        </div>
+                        <div class="bar-track">
+                            <div class="bar-fill bar-pg18-1" data-width="43.6%"></div>
+                        </div>
+                    </div>
+                </div>
+                <div class="multiplier">2.29<span>x</span></div>
+            </div>
+
+            <!-- Card 2 -->
+            <div class="card card-purple">
+                <div class="card-header">
+                    <h2 class="card-title">Sequential Scan</h2>
+                    <div class="speedup-badge" style="background: rgba(139, 92, 246, 0.15);">+25.8% Faster</div>
+                </div>
+                
+                <div class="chart-container">
+                    <div class="bar-group">
+                        <div class="bar-label">
+                            <span>PG 16 (Sync mode)</span>
+                            <span>2457.8 ms</span>
+                        </div>
+                        <div class="bar-track">
+                            <div class="bar-fill bar-pg16" data-width="100%"></div>
+                        </div>
+                    </div>
+                    <div class="bar-group">
+                        <div class="bar-label">
+                            <span>PG 18 (Worker mode)</span>
+                            <span>1823.2 ms</span>
+                        </div>
+                        <div class="bar-track">
+                            <div class="bar-fill bar-pg18-2" data-width="74.1%"></div>
+                        </div>
+                    </div>
+                </div>
+                <div class="multiplier">1.35<span>x</span></div>
+            </div>
+
+             <!-- Card 3 -->
+             <div class="card card-neutral">
+                <div class="card-header">
+                    <h2 class="card-title">VACUUM (500K dead tuples)</h2>
+                    <div class="speedup-badge neutral">Statistically negligible</div>
+                </div>
+                
+                <div class="chart-container">
+                    <div class="bar-group">
+                        <div class="bar-label">
+                            <span>PG 16 (Sync mode)</span>
+                            <span>22.14 sec</span>
+                        </div>
+                        <div class="bar-track">
+                            <div class="bar-fill bar-pg16" data-width="99.4%"></div>
+                        </div>
+                    </div>
+                    <div class="bar-group">
+                        <div class="bar-label">
+                            <span>PG 18 (Worker mode)</span>
+                            <span>22.27 sec</span>
+                        </div>
+                        <div class="bar-track">
+                            <div class="bar-fill bar-pg18-3" data-width="100%"></div>
+                        </div>
+                    </div>
+                </div>
+                <div class="multiplier">0.99<span>x</span></div>
+            </div>
+        </main>
+
+        <section class="specs-panel">
+            <h3 style="font-size: 1.5rem; margin-bottom: 1rem; color: #fff;">Test Environment Parameters</h3>
+            <p style="color: var(--text-secondary); margin-bottom: 1rem;">Both database instances were benchmarked on the same machine to eliminate hardware variables, with identical limits enforced by the PGDG configuration on Oracle Linux kernel (5.4).</p>
+            
+            <div class="specs-grid">
+                <div class="spec-item">
+                    <h4>Tested Versions</h4>
+                    <p>PostgreSQL 16.13 / PostgreSQL 18.0</p>
+                </div>
+                <div class="spec-item">
+                    <h4>io_method</h4>
+                    <p>PG16: none (sync) / PG18: worker</p>
+                </div>
+                <div class="spec-item">
+                    <h4>shared_buffers</h4>
+                    <p>256 MB</p>
+                </div>
+                <div class="spec-item">
+                    <h4>Table Size</h4>
+                    <p>~1.5 GB (5M static records)</p>
+                </div>
+            </div>
+        </section>
+
+        <footer>
+            <p>Generated automatically in AI Workspace (KCB Kris • 2026-04-02)</p>
+        </footer>
+    </div>
+
+    <script>
+        // Trigger animations when elements are loaded visually
+        document.addEventListener('DOMContentLoaded', () => {
+            setTimeout(() => {
+                const fills = document.querySelectorAll('.bar-fill');
+                fills.forEach(fill => {
+                    const targetWidth = fill.getAttribute('data-width');
+                    fill.style.width = targetWidth;
+                });
+            }, 300);
+        });
+    </script>
+</body>
+</html>
